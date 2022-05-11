@@ -1,0 +1,56 @@
+- hosts: all
+  become: yes
+  become_method: sudo
+  tasks:
+  - name: Install apache2
+    apt:
+      name: 'apache2'
+      update_cache: yes
+      state: latest
+  - name: Configure ports
+    lineinfile:
+     path: /etc/apache2/ports.conf
+     regexp: '^Listen 80'
+     line: 'Listen 8888'
+     state: present
+  - name: Configure virtualhost
+    lineinfile:
+     path: /etc/apache2/sites-available/000-default.conf
+     regexp: '^<VirtualHost \*:80>'
+     line: '<VirtualHost *:8888>'
+     state: present
+  - name: Enabling PHP 5.6
+    apache2_module:
+     name: php5.6
+     state: present
+  - name: Create new folder for Apache
+    file:
+     path: /var/www/apache
+     state: directory
+     owner: www-data
+     group: www-data
+     mode: '0755'
+  - name: Creating PHP file for Apache
+    file:
+     path: /var/www/apache/index.php
+     state: touch
+     owner: www-data
+     group: www-data
+     mode: u=r,g=r,o=r
+  - name: Hello,World!
+    lineinfile:
+     path: /var/www/apache/index.php
+     line: '<?php echo "<p>Hello, World!</p><br><p>It is Apache talking with you.</p>" ?>'
+  - name: Redirect config to new www folder
+    lineinfile:
+     path: /etc/apache2/sites-available/000-default.conf
+     regexp: 'DocumentRoot /var/www/html'
+     line: 'DocumentRoot /var/www/apache'
+     state: present
+    notify:
+     - Restart Apache
+  handlers:
+  - name: Restart Apache
+    service:
+     name: apache2
+     state: restarted

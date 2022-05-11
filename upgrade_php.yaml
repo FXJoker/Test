@@ -1,0 +1,42 @@
+- hosts: all
+  become: yes
+  become_method: sudo
+  tasks:
+  - name: Update and upgrade packages
+    apt:
+      name: '*'
+      state: latest
+      update_cache: yes
+      only_upgrade: yes
+  - name: Upgrading PHP
+    apt:
+     name: ['php8.1', 'php8.1-fpm', 'libapache2-mod-php8.1']
+  - name: Disabling PHP 5.6
+    apache2_module:
+     name: php5.6
+     state: absent
+    notify:
+     - Restart Apache
+  - name: Enabling PHP 8.1 at Apache
+    apache2_module:
+     name: php8.1
+     state: present
+    notify:
+     - Restart Apache
+  - name: Configure PHP at Nginx
+    lineinfile:
+     path: /etc/nginx/sites-available/default
+     regexp: 'fastcgi_pass unix:/var/run/php/php5.6-fpm.sock;'
+     line: 'fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;'
+     state: present
+    notify:
+     - Restart Nginx
+  handlers:
+  - name: Restart Apache
+    service:
+     name: apache2
+     state: restarted
+  - name: Restart Nginx
+    service:
+     name: nginx
+     state: restarted

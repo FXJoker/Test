@@ -1,0 +1,37 @@
+- hosts: all
+  become: yes
+  become_method: sudo
+  tasks:
+  - name: Install Nginx
+    apt:
+      name: 'nginx'
+      update_cache: yes
+      state: latest
+  - name: Create new folder for Nginx
+    file:
+     path: /var/www/nginx
+     state: directory
+     owner: www-data
+     group: www-data
+  - name: Creating PHP file for Nginx
+    file:
+     path: /var/www/nginx/index.php
+     state: touch
+     owner: www-data
+     group: www-data
+     mode: u=r,g=r,o=r
+  - name: Hello,World!
+    lineinfile:
+     path: /var/www/nginx/index.php
+     line: '<?php echo "<p>Hello, World!</p><br><p>It is Nginx talking with you.</p>" ?>'
+  - name: Copy config file for nginx
+    copy:
+     src: default
+     dest: /etc/nginx/sites-available/default
+    notify:
+     - Restart Nginx
+  handlers:
+  - name: Restart Nginx
+    service:
+     name: nginx
+     state: restarted
